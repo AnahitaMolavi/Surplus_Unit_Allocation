@@ -258,6 +258,34 @@ def generate_joint_scenarios(var_group_df: pd.DataFrame, num_scenarios_per_group
     return joint_scenarios_df
 
 
+def create_target_demands(demand_df, joint_scenarios_df):
+    # Create a DataFrame with all combinations of Scenario_ID and Product_ID
+    target_demand_df = pd.DataFrame(columns=['Scenario_ID', 'Product_ID'])
+    target_demand_df['Scenario_ID'] = joint_scenarios_df['Scenario_ID']
+    target_demand_df['key'] = 0  # Create a common key for merging
+    demand_df['key'] = 0  # Create a common key for merging
+    target_demand_df = target_demand_df.merge(demand_df[['Product_ID', 'Demand', 'Variance group', 'key']], on='key')
+    target_demand_df.drop('key', axis=1, inplace=True)
+    
+    # Calculate target_demand
+    group_demand_vars = pd.DataFrame({
+        f'demand_var_group{i}': joint_scenarios_df[f'demand_var_group{i}'].values 
+        for i in range(6)
+    })
+    
+    target_demand_df = target_demand_df.merge(group_demand_vars, left_on = 'Scenario_ID', right_index=True)
+    
+    for group in target_demand_df['Variance group'].unique():
+    
+        target_demand_df.loc[target_demand_df['Variance group'] == group, 'target_demand'] = target_demand_df[target_demand_df['Variance group'] == group]['Demand'] * target_demand_df[target_demand_df['Variance group'] == group][f'demand_var_group{int(group)}'] 
+
+    target_demand_df.rename(columns = {'Product_ID_y': 'Product_ID'}, inplace = True)    
+    target_demand_df = target_demand_df[['Scenario_ID', 'Product_ID', 'target_demand']]
+    
+    return target_demand_df
+
+
+#Placeholder
 def reduce_scenarios(joint_scenarios_df, number_of_scenarios):
     reduced_df = pd.DataFrame()
     
